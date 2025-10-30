@@ -7,10 +7,18 @@ export interface CardArtifact {
     title: string;
     description: string;
     imageUrl?: string;
+    explanation?: string;
+    rating?: number;
+    socialProof?: string;
+}
+
+export interface RecommendationGroup {
+    title: string;
+    cards: CardArtifact[];
 }
 
 export interface ChipArtifact {
-    id: string;
+    id:string;
     label: string;
 }
 
@@ -28,7 +36,7 @@ export interface ChatMessage {
     text: string;
     sources?: GroundingSource[];
     artifacts?: {
-        cards?: CardArtifact[];
+        recommendationGroups?: RecommendationGroup[];
         chips?: ChipArtifact[];
         map?: MapArtifact;
     };
@@ -52,18 +60,26 @@ export interface GroundingSource {
     }[];
 }
 
-export interface Category {
+export interface WhiteboardNode {
     id: string;
+    content: string;
+    parentId: string | null;
+}
+
+export interface Category {
+    id:string;
     name: string;
     systemPrompt: string;
     messages: ChatMessage[];
     parentId?: string | null;
     isPinned?: boolean;
+    isFolder?: boolean;
     icon?: string; // e.g. emoji
-    interactionMode: 'conversational' | 'card';
+    interactionMode: 'conversational' | 'card' | 'whiteboard';
+    whiteboardData?: WhiteboardNode[];
 }
 
-export type Theme = 'light' | 'dark' | 'sunset';
+export type Theme = 'light' | 'dark' | 'sunset' | 'ocean' | 'meadow';
 
 export interface PersonalContextItem {
     id: string;

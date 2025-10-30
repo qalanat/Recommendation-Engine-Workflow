@@ -1,5 +1,5 @@
 {
-  "name": "Kai - Your Personal Companion",
+  "name": "Agent of Discovery",
   "description": "An advanced companion that engages in conversation to provide tailored suggestions and help you organize your thoughts. Uses text, voice, and real-time information to assist you.",
   "requestFramePermissions": [
     "microphone",

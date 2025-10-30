@@ -5,8 +5,9 @@ import Sidebar from './components/Sidebar';
 import WelcomeScreen from './components/WelcomeScreen';
 import SettingsModal from './components/SettingsModal';
 import PersonalContextModal from './components/PersonalContextModal';
-import { UserProfile, Category, Theme, PersonalContextItem } from './types';
-import { Loader2, Settings } from 'lucide-react';
+import Whiteboard from './components/Whiteboard';
+import { UserProfile, Category, Theme, PersonalContextItem, WhiteboardNode } from './types';
+import { Loader2, Settings, Menu } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -15,33 +16,41 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPersonalContextOpen, setIsPersonalContextOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
   const [theme, setTheme] = useState<Theme>('light');
   const [personalContext, setPersonalContext] = useState<PersonalContextItem[]>([]);
 
   useEffect(() => {
-    // Theme initialization
+    const handleResize = () => {
+        const mobile = window.innerWidth < 768;
+        setIsMobileView(mobile);
+        if (!mobile) {
+            setIsSidebarOpen(true); // Always open sidebar on desktop
+        } else {
+            setIsSidebarOpen(false); // Default to closed on mobile
+        }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     const storedTheme = localStorage.getItem('gemini-theme') as Theme;
     if (storedTheme) {
       setTheme(storedTheme);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
+    } else {
+      setTheme('dark'); // Default to dark theme
     }
   }, []);
 
   useEffect(() => {
-    // Apply theme to document
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('gemini-theme', theme);
   }, [theme]);
 
   useEffect(() => {
-    // User and data initialization
     try {
       const storedUser = localStorage.getItem('gemini-user-profile');
       if (storedUser) {
@@ -53,7 +62,6 @@ const App: React.FC = () => {
         
         const storedContext = localStorage.getItem(`gemini-context-${parsedUser.name}`);
         setPersonalContext(storedContext ? JSON.parse(storedContext) : getDefaultPersonalContext());
-
       }
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -62,15 +70,26 @@ const App: React.FC = () => {
   }, []);
 
   const getDefaultCategories = (name: string): Category[] => [
-    { id: 'rec-1', name: 'Recommendations', systemPrompt: `You are an expert recommendation assistant named Kai, embodying a friendly, warm, and insightful personality. The user's name is ${name}. Your primary goal is to provide highly personalized and helpful recommendations.\n- Engage Naturally: Start with a warm, varied greeting. Converse like a knowledgeable friend, not a robot.\n- Understand Intent: Before recommending, ask clarifying questions to grasp the user's current needs, mood, and context. Frame these questions as interactive suggestions using the format [QUICK_REPLY: "Question 1?", "Question 2?"].\n- Leverage Tools: Use Google Search for up-to-the-minute information and Google Maps to find locations.\n- Be Conversational: Frame recommendations as suggestions ("You might enjoy...", "How does this sound?"). Encourage feedback and iterate.\n- Structure Data: When comparing items, use Markdown tables. For places, try to include user reviews using the format [REVIEW: "User Name", "Rating", "Review text..."].`, messages: [], isPinned: true, interactionMode: 'conversational' },
+    { id: 'rec-1', name: 'Recommendations', systemPrompt: `You are an expert recommendation assistant. The user's name is ${name}. Your primary goal is to provide highly personalized and helpful recommendations based on their taste profile and conversation history.\n\n**Interaction Flow:**\n1.  **Initiate with Intent:** Start by asking the user for their current mood or intent. Frame these questions as interactive suggestions using the format [QUICK_REPLY: "Shopping for a gift?", "Just browsing", "Looking for inspiration?"].\n2.  **Understand and Clarify:** Before recommending, ask clarifying questions if needed to grasp the user's needs.\n3.  **Leverage Tools:** Use Google Search for up-to-the-minute information and Google Maps to find locations.\n\n**Response Format:**\nYou are in a Card-based UI mode. Your response **MUST** be a single, valid JSON object and nothing else. Do not wrap it in markdown backticks or any other text. The JSON object must have a 'text' property with your conversational response, and can optionally have 'recommendationGroups', 'chips', and 'map' properties.\n\n**JSON Structure:**\n{\n  "text": "Your textual response to the user.",\n  "recommendationGroups": [\n    {\n      "title": "A thematic title for this group (e.g., 'Inspired by your love for Sci-Fi', 'Trending in your area')",\n      "cards": [\n        {\n          "id": "a_unique_string_id",\n          "title": "Item Title",\n          "description": "A brief, engaging description.",\n          "imageUrl": "https://example.com/image.jpg",\n          "explanation": "A short sentence explaining why this is recommended (e.g., 'Because you enjoyed [Previous Item]').",\n          "rating": 4.5, \n          "socialProof": "e.g., 'Popular this week' or 'Frequently bought with [Item X]'"\n        }\n      ]\n    }\n  ],\n  "chips": [\n    {"id": "c1", "label": "Follow-up question or filter"}\n  ],\n  "map": {\n    "query": "e.g., 'coffee shops near me'"\n  }\n}\n\n**Content Guidelines:**\n- **Explain a little:** Always include a brief \`explanation\` for each card.\n- **Group Logically:** Group recommendations into thematic carousels using \`recommendationGroups\`. Create 1-3 groups per response.\n- **Add Social Proof:** Where possible, add \`rating\` or \`socialProof\` to make recommendations more compelling.`, messages: [], isPinned: true, interactionMode: 'card' },
     { id: 'std-1', name: 'Standard Chat', systemPrompt: `You are a helpful and friendly conversational assistant. The user's name is ${name}. Be curious and engaging.`, messages: [], interactionMode: 'conversational' },
   ];
 
   const getDefaultPersonalContext = (): PersonalContextItem[] => [
-      { id: 'ctx-1', question: 'What are some of your favorite hobbies or interests?', answer: '' },
-      { id: 'ctx-2', question: 'Are there any topics you love to discuss or learn about?', answer: '' },
-      { id: 'ctx-3', question: 'What kind of movies, books, or music do you enjoy?', answer: '' },
-      { id: 'ctx-4', question: 'Do you have any dietary preferences or restrictions?', answer: '' },
+      { id: 'ctx-1', question: 'What are some of your favorite hobbies, interests, or genres (e.g., sci-fi movies, historical fiction books)?', answer: '' },
+      { id: 'ctx-2', question: 'Are there any specific brands, artists, or creators you love?', answer: '' },
+      { id: 'ctx-3', question: 'What are some things you generally dislike or want to avoid?', answer: '' },
+      { id: 'ctx-4', question: 'Do you have any dietary preferences, allergies, or other restrictions I should know about?', answer: '' },
+  ];
+  
+  const defaultWhiteboardNodes: WhiteboardNode[] = [
+    { id: 'wb-root-1', content: 'My Awesome Project', parentId: null },
+    { id: 'wb-1-1', content: 'Brainstorming', parentId: 'wb-root-1' },
+    { id: 'wb-1-2', content: 'Execution', parentId: 'wb-root-1' },
+    { id: 'wb-2-1', content: 'Initial Ideas', parentId: 'wb-1-1' },
+    { id: 'wb-2-2', content: 'Key Features', parentId: 'wb-1-1' },
+    { id: 'wb-3-1', content: 'Core MVP', parentId: 'wb-2-2' },
+    { id: 'wb-3-2', content: '"Nice to Have" Features', parentId: 'wb-2-2' },
+    { id: 'wb-2-3', content: 'Roadmap', parentId: 'wb-1-2' },
   ];
 
   const handleLogin = useCallback((name: string) => {
@@ -88,11 +107,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogout = useCallback(() => {
-    // Could add a confirmation modal here
     localStorage.removeItem('gemini-user-profile');
-    // For privacy, we could also remove the user-specific data
-    // localStorage.removeItem(`gemini-categories-${user.name}`);
-    // localStorage.removeItem(`gemini-context-${user.name}`);
     setUser(null);
     setCategories([]);
     setPersonalContext([]);
@@ -111,22 +126,46 @@ const App: React.FC = () => {
     saveCategories(newCategories);
   };
 
-  const handleNewCategory = (name: string, options?: { parentId?: string, isFolder?: boolean }) => {
+  const handleNewCategory = (name: string, options?: { parentId?: string; isFolder?: boolean, interactionMode?: Category['interactionMode'] }) => {
     if(user){
+      let systemPrompt = `You are a helpful assistant. The user's name is ${user.name}.`;
+      if (options?.interactionMode === 'whiteboard') {
+        systemPrompt = `You are an imaginative brainstorming partner. Your purpose is to help the user explore, expand, and connect ideas in a visual mind-map format.
+- When asked to brainstorm or expand on a topic, provide a short, numbered list of creative and thought-provoking keywords or brief phrases that can serve as new branches in the mind map.
+- Aim for variety and originality. Avoid full sentences.
+- Your output will directly populate the mind map, so clarity and brevity are key.
+- Example: If the user asks for ideas about "Marketing Strategy", your response should be like:
+1. Guerilla Marketing
+2. Viral Loop Mechanics
+3. Community Building
+4. Podcast Sponsorships
+5. Interactive Web Experience`;
+      }
+
       const newCategory: Category = {
         id: `cat-${Date.now()}`,
         name,
-        systemPrompt: `You are a helpful assistant. The user's name is ${user.name}.`,
+        systemPrompt,
         messages: [],
         parentId: options?.parentId,
-        interactionMode: 'conversational',
+        isFolder: options?.isFolder,
+        interactionMode: options?.interactionMode || 'conversational',
+        whiteboardData: options?.interactionMode === 'whiteboard' ? defaultWhiteboardNodes : undefined,
       };
       const newCategories = [...categories, newCategory];
       saveCategories(newCategories);
       if (!options?.isFolder) {
         setActiveCategoryId(newCategory.id);
+        if(isMobileView) setIsSidebarOpen(false);
       }
     }
+  };
+
+  const handleDiscussNode = (nodeContent: string) => {
+      const chatName = `Discuss: ${nodeContent.substring(0, 40)}${nodeContent.length > 40 ? '...' : ''}`;
+      handleNewCategory(chatName, {
+          interactionMode: 'conversational',
+      });
   };
   
   const handleDeleteCategory = (categoryId: string) => {
@@ -152,11 +191,17 @@ const App: React.FC = () => {
       }
   };
 
+  const handleSelectCategory = (id: string) => {
+    setActiveCategoryId(id);
+    if (isMobileView) {
+      setIsSidebarOpen(false);
+    }
+  }
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-stone-100 dark:bg-stone-900">
-        <Loader2 className="h-12 w-12 animate-spin text-[#E07A5F]" />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
@@ -168,40 +213,63 @@ const App: React.FC = () => {
   const activeCategory = categories.find(c => c.id === activeCategoryId) || null;
 
   return (
-    <div className="flex h-screen w-screen font-sans">
+    <div className="flex h-screen w-screen font-sans overflow-hidden">
       <Sidebar 
         user={user}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isOpen={isSidebarOpen}
+        isMobileView={isMobileView}
+        onSetOpen={setIsSidebarOpen}
         categories={categories} 
         activeCategoryId={activeCategoryId}
-        onSelectCategory={setActiveCategoryId}
+        onSelectCategory={handleSelectCategory}
         onNewCategory={handleNewCategory}
         onDeleteCategory={handleDeleteCategory}
         onTogglePin={handleTogglePin}
         onOpenPersonalContext={() => setIsPersonalContextOpen(true)}
         onLogout={handleLogout}
       />
-      <main className={`flex-1 flex flex-col relative transition-all duration-300 ease-in-out bg-white/50 dark:bg-stone-800/20`}>
-          <button 
-            onClick={() => setIsSettingsOpen(true)}
-            className="absolute top-4 right-4 z-20 rounded-full p-2 text-stone-500 dark:text-stone-400 transition-colors hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-stone-800 dark:hover:text-stone-100 icon-snap"
-            aria-label="Open settings"
-            disabled={!activeCategory}
-            >
-             <Settings size={22}/>
-          </button>
+      <main className="flex-1 flex flex-col relative transition-all duration-300 ease-in-out">
+          <div className="flex items-center justify-between p-2 sm:p-4 absolute top-0 right-0 z-20">
+              {isMobileView && !isSidebarOpen && (
+                 <button 
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="p-2 mr-2 rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label="Open sidebar"
+                    >
+                    <Menu size={22}/>
+                </button>
+              )}
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Open settings"
+                disabled={!activeCategory}
+                >
+                <Settings size={22}/>
+              </button>
+          </div>
           
           {activeCategory ? (
-            <UnifiedChat 
-              key={activeCategory.id} 
-              category={activeCategory} 
-              user={user} 
-              onUpdateCategory={handleUpdateCategory} 
-              personalContext={personalContext}
-            />
+            activeCategory.interactionMode === 'whiteboard' ? (
+              <Whiteboard 
+                key={activeCategory.id}
+                category={activeCategory}
+                user={user}
+                onUpdateCategory={handleUpdateCategory}
+                personalContext={personalContext}
+                onDiscussNode={handleDiscussNode}
+              />
+            ) : (
+              <UnifiedChat 
+                key={activeCategory.id} 
+                category={activeCategory} 
+                user={user} 
+                onUpdateCategory={handleUpdateCategory} 
+                personalContext={personalContext}
+              />
+            )
           ) : (
-            <WelcomeScreen userName={user.name} />
+            <WelcomeScreen userName={user.name} onNewChat={() => handleNewCategory('New Chat')} />
           )}
       </main>
       

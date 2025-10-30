@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ChatMessage, CardArtifact, ChipArtifact } from '../types';
-import { MapPin, Search, Paperclip, ChevronDown, Star, MessageSquareQuote, CheckCircle2, ImageOff } from 'lucide-react';
+import { MapPin, Search, Paperclip, ChevronDown, Star, MessageSquareQuote, CheckCircle2, ImageOff, ThumbsUp, ThumbsDown, Info, Copy } from 'lucide-react';
 import { marked } from 'marked';
 
 interface ChatMessageItemProps {
@@ -12,136 +12,79 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onArtifactAc
     const isUser = message.sender === 'user';
     const [isSourcesOpen, setIsSourcesOpen] = useState(false);
     
-    // State for card/chip selections
-    const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
-    const [selectedChipIds, setSelectedChipIds] = useState<Set<string>>(new Set());
-
     if (message.isLoading) {
         return (
             <div className="flex items-end gap-3 animate-fade-in-slide-up justify-start">
-                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-200 dark:bg-stone-700">
+                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                     <div className="thinking-dot"></div>
                     <div className="thinking-dot"></div>
                     <div className="thinking-dot"></div>
                 </div>
-                <div className="w-fit max-w-md rounded-2xl rounded-bl-lg bg-stone-200 dark:bg-stone-700 px-4 py-3">
-                    <p className="text-sm text-stone-500 dark:text-stone-400">Thinking...</p>
+                <div className="w-fit max-w-md rounded-2xl rounded-bl-lg bg-card border border-border px-4 py-3">
+                    <p className="text-sm text-muted-foreground">Thinking...</p>
                 </div>
             </div>
         );
     }
     
-    const { cleanText, quickReplies, reviews } = useMemo(() => {
+    const { cleanText, quickReplies } = useMemo(() => {
         let text = message.text || '';
         const quickReplyRegex = /\[QUICK_REPLY:((?:"[^"]*?",?)*)\]/g;
-        const reviewRegex = /\[REVIEW: "([^"]+)", "([^"]+)", "([^"]+)"\]/g;
         
         const extractedReplies: string[] = [];
-        const extractedReviews: { author: string, rating: string, text: string }[] = [];
 
         text = text.replace(quickReplyRegex, (_, replies) => {
-            if (message.artifacts) return ''; // Don't show quick replies if there are cards
+            if (message.artifacts?.recommendationGroups) return ''; // Don't show quick replies if there are cards
             const parsedReplies = replies.split('","').map(r => r.replace(/"/g, '').trim());
             extractedReplies.push(...parsedReplies);
-            return ''; // Remove the tag from text
-        });
-
-        text = text.replace(reviewRegex, (_, author, rating, reviewText) => {
-            extractedReviews.push({ author, rating, text: reviewText });
             return ''; // Remove the tag from text
         });
 
         return {
             cleanText: text.trim(),
             quickReplies: extractedReplies,
-            reviews: extractedReviews,
         };
     }, [message.text, message.artifacts]);
 
-    const parsedText = cleanText ? marked.parse(cleanText) : '';
-    
-    const handleToggleCard = (id: string) => {
-        setSelectedCardIds(prev => {
-            const newSet = new Set(prev);
-            if(newSet.has(id)) newSet.delete(id);
-            else newSet.add(id);
-            return newSet;
-        });
-    }
+    const parsedText = useMemo(() => cleanText ? marked.parse(cleanText, { breaks: true, gfm: true }) : '', [cleanText]);
 
-    const handleToggleChip = (id: string) => {
-        setSelectedChipIds(prev => {
-            const newSet = new Set(prev);
-            if(newSet.has(id)) newSet.delete(id);
-            else newSet.add(id);
-            return newSet;
-        });
-    }
-
-    const handleContinue = () => {
-        const selectedCards = message.artifacts?.cards?.filter(c => selectedCardIds.has(c.id)) || [];
-        const selectedCardTitles = selectedCards.map(c => c.title);
-
-        const selectedChips = message.artifacts?.chips?.filter(c => selectedChipIds.has(c.id)) || [];
-        const selectedChipLabels = selectedChips.map(c => c.label);
-
-        const selections = [...selectedCardTitles, ...selectedChipLabels];
-        if(selections.length > 0) {
-            const prompt = `I've selected: ${selections.join(', ')}.`;
-            onArtifactAction(prompt);
-        }
+    const handleCopy = () => {
+        navigator.clipboard.writeText(message.text);
     };
 
     return (
-        <div className={`flex flex-col gap-2 animate-fade-in-slide-up ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className={`group flex flex-col gap-2 animate-fade-in-slide-up ${isUser ? 'items-end' : 'items-start'}`}>
             <div 
-              className={`w-fit max-w-2xl rounded-2xl p-4 text-base ${isUser ? 'rounded-br-none bg-[#E07A5F] text-white' : 'rounded-bl-none bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 shadow-sm'}`}
+              className={`relative w-fit max-w-2xl rounded-2xl text-base ${isUser ? 'rounded-br-none bg-primary text-primary-foreground' : 'rounded-bl-none bg-card text-card-foreground border border-border'}`}
             >
-                {message.file && (
-                    <div className="mb-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-stone-50/50 dark:bg-stone-800/50 p-2">
-                        <div className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
-                            <Paperclip size={16} />
-                            <span>{message.file.name}</span>
-                        </div>
-                        {message.file.type.startsWith('image/') && (
-                           <img src={message.file.url} alt={message.file.name} className="mt-2 max-h-48 rounded-md" />
-                        )}
-                         {message.file.type.startsWith('video/') && (
-                           <video src={message.file.url} controls className="mt-2 max-h-48 rounded-md" />
-                        )}
-                    </div>
-                )}
-                {parsedText && (
-                    <div className="prose prose-stone dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-3 prose-table:w-full prose-th:bg-stone-100 prose-th:p-2 prose-td:p-2 dark:prose-th:bg-stone-600" dangerouslySetInnerHTML={{ __html: parsedText }} />
-                )}
-                
-                {reviews.length > 0 && (
-                     <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-600/60 space-y-3">
-                         <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">User Reviews</h4>
-                         {reviews.map((review, i) => (
-                             <div key={i} className="rounded-lg bg-stone-100/70 dark:bg-stone-800/50 p-3">
-                                <div className="flex items-center justify-between">
-                                    <p className="font-semibold text-sm text-stone-700 dark:text-stone-200">{review.author}</p>
-                                    <div className="flex items-center gap-1 text-amber-500">
-                                        <Star size={14} fill="currentColor"/>
-                                        <span className="text-sm font-bold">{review.rating}</span>
-                                    </div>
-                                </div>
-                                <p className="text-stone-600 dark:text-stone-300 text-sm mt-1">"{review.text}"</p>
+                <div className="px-4 py-3">
+                    {message.file && (
+                        <div className="mb-2 rounded-lg border border-border bg-muted/30 p-2">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Paperclip size={16} />
+                                <span>{message.file.name}</span>
                             </div>
-                         ))}
-                     </div>
-                )}
-
-
+                            {message.file.type.startsWith('image/') && (
+                            <img src={message.file.url} alt={message.file.name} className="mt-2 max-h-48 rounded-md" />
+                            )}
+                            {message.file.type.startsWith('video/') && (
+                            <video src={message.file.url} controls className="mt-2 max-h-48 rounded-md" />
+                            )}
+                        </div>
+                    )}
+                    {parsedText && (
+                        <div className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-3" dangerouslySetInnerHTML={{ __html: parsedText }} />
+                    )}
+                </div>
+                
                 {message.sources && message.sources.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-600/60">
+                    <div className="mt-2 p-3 border-t border-border/80">
                         <button onClick={() => setIsSourcesOpen(!isSourcesOpen)} className="flex justify-between items-center w-full">
-                          <h4 className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-white/80' : 'text-stone-500 dark:text-stone-400'}`}>Sources</h4>
-                          <ChevronDown size={16} className={`transition-transform ${isUser ? 'text-white/70' : 'text-stone-400 dark:text-stone-500'} ${isSourcesOpen ? 'rotate-180' : ''}`} />
+                          <h4 className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>Sources</h4>
+                          <ChevronDown size={16} className={`transition-transform ${isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'} ${isSourcesOpen ? 'rotate-180' : ''}`} />
                         </button>
-                        <div className={`sources-container ${isSourcesOpen ? 'open' : ''}`}>
-                          <div className="sources-content pt-2 flex flex-col gap-2">
+                        {isSourcesOpen && (
+                          <div className="pt-2 flex flex-col gap-2 animate-fade-in" style={{animationDuration: '0.3s'}}>
                             {message.sources.map((source, i) => (
                                 <div key={i}>
                                 <a 
@@ -149,23 +92,23 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onArtifactAc
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   className={`flex items-center gap-2.5 rounded-lg p-2 text-sm transition-colors ${
-                                      isUser ? 'bg-white/20 hover:bg-white/40' : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-600'
+                                      isUser ? 'bg-black/10 hover:bg-black/20' : 'bg-muted/50 hover:bg-muted'
                                     }`}
                                 >
-                                    <div className={`flex-shrink-0 rounded-md p-1.5 ${isUser ? 'bg-white/20' : 'bg-white dark:bg-stone-600'}`}>
+                                    <div className={`flex-shrink-0 rounded-md p-1.5 ${isUser ? 'bg-black/10' : 'bg-card'}`}>
                                         {source.type === 'maps' ? <MapPin size={14} className="text-green-500"/> : <Search size={14} className="text-blue-500"/>}
                                     </div>
-                                    <span className={`truncate ${isUser ? 'text-white' : 'text-stone-700 dark:text-stone-200'}`}>{source.title || 'View Source'}</span>
+                                    <span className="truncate">{source.title || 'View Source'}</span>
                                 </a>
                                 {source.type === 'maps' && source.reviewSnippets && source.reviewSnippets.length > 0 && (
-                                    <div className={`ml-5 mt-2 space-y-2 border-l-2 pl-4 ${isUser ? 'border-white/30' : 'border-stone-200 dark:border-stone-600'}`}>
+                                    <div className={`ml-5 mt-2 space-y-2 border-l-2 pl-4 ${isUser ? 'border-primary-foreground/30' : 'border-border'}`}>
                                         {source.reviewSnippets.slice(0, 2).map((review, idx) => (
                                             <div key={idx} className="text-xs">
                                                 <div className="flex items-center gap-1">
-                                                    <MessageSquareQuote size={12} className={isUser ? 'text-white/60' : 'text-stone-400'}/>
-                                                    <p className={isUser ? 'text-white/90' : 'text-stone-500 dark:text-stone-400'}><span className={isUser ? 'font-semibold text-white' : 'font-semibold text-stone-600 dark:text-stone-300'}>{review.author}</span> rated it <span className="font-semibold">{review.rating} ★</span></p>
+                                                    <MessageSquareQuote size={12} className={isUser ? 'text-primary-foreground/60' : 'text-muted-foreground'}/>
+                                                    <p className={isUser ? 'text-primary-foreground/90' : 'text-muted-foreground'}><span className="font-semibold">{review.author}</span> rated it <span className="font-semibold">{review.rating} ★</span></p>
                                                 </div>
-                                                <p className={`italic mt-0.5 ${isUser ? 'text-white/80' : 'text-stone-500 dark:text-stone-400'}`}>"{review.text}"</p>
+                                                <p className={`italic mt-0.5 ${isUser ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>"{review.text}"</p>
                                             </div>
                                         ))}
                                     </div>
@@ -173,59 +116,83 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onArtifactAc
                                 </div>
                             ))}
                           </div>
-                        </div>
+                        )}
                     </div>
+                )}
+                 {!isUser && !message.isLoading && cleanText && (
+                    <button onClick={handleCopy} title="Copy" className="absolute -top-3 -right-3 p-1.5 bg-card border border-border rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-muted-foreground hover:text-primary">
+                        <Copy size={14}/>
+                    </button>
                 )}
             </div>
              {/* Artifacts Container */}
             {message.artifacts && !isUser && (
-                <div className="w-full max-w-2xl pl-2 space-y-4 animate-fade-in-slide-up">
-                    {/* Cards */}
-                    {message.artifacts.cards && message.artifacts.cards.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {message.artifacts.cards.map(card => (
-                                <button key={card.id} onClick={() => handleToggleCard(card.id)} className={`relative text-left rounded-xl border-2 transition-all duration-200 transform hover:scale-[1.03] focus:outline-none ${selectedCardIds.has(card.id) ? 'border-orange-400 shadow-lg' : 'border-stone-200 dark:border-stone-600 hover:border-stone-300 dark:hover:border-stone-500'}`}>
-                                    <div className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white/70 backdrop-blur-sm dark:bg-black/50">
-                                        <CheckCircle2 size={20} className={`transition-colors ${selectedCardIds.has(card.id) ? 'text-orange-500 fill-orange-100 dark:fill-orange-900/50' : 'text-stone-300 dark:text-stone-500'}`} />
-                                    </div>
-                                    {card.imageUrl ? 
-                                        <img src={card.imageUrl} alt={card.title} className="w-full h-32 object-cover rounded-t-lg" /> :
-                                        <div className="w-full h-32 bg-stone-200 dark:bg-stone-700 rounded-t-lg flex items-center justify-center">
-                                            <ImageOff className="text-stone-400 dark:text-stone-500" />
+                <div className="w-full max-w-full space-y-6 animate-fade-in-slide-up">
+                    {/* Recommendation Groups (Carousels) */}
+                    {message.artifacts.recommendationGroups?.map((group, index) => (
+                        <div key={index} className="space-y-3">
+                            <h3 className="text-lg font-bold font-display text-foreground pl-2">{group.title}</h3>
+                            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4" style={{scrollSnapType: 'x mandatory'}}>
+                                {group.cards.map(card => (
+                                    <div key={card.id} className="flex-shrink-0 w-64 bg-card rounded-xl border border-border shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col" style={{scrollSnapAlign: 'start'}}>
+                                        {card.imageUrl ? 
+                                            <img src={card.imageUrl} alt={card.title} className="w-full h-32 object-cover rounded-t-lg" /> :
+                                            <div className="w-full h-32 bg-muted rounded-t-lg flex items-center justify-center">
+                                                <ImageOff className="text-muted-foreground" />
+                                            </div>
+                                        }
+                                        <div className="p-3 flex-1">
+                                            <h4 className="font-bold text-card-foreground truncate">{card.title}</h4>
+                                            {card.rating && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <Star size={14} className="text-amber-500" fill="currentColor"/>
+                                                    <span className="text-sm font-bold text-muted-foreground">{card.rating.toFixed(1)}</span>
+                                                </div>
+                                            )}
+                                            <p className="text-sm text-muted-foreground mt-1 h-10 overflow-hidden">{card.description}</p>
+                                            
+                                            {card.explanation && (
+                                                <div className="mt-2 p-2 text-xs rounded-lg bg-muted/50 text-muted-foreground flex items-start gap-2">
+                                                    <Info size={14} className="flex-shrink-0 mt-0.5 text-sky-500"/>
+                                                    <span>{card.explanation}</span>
+                                                </div>
+                                            )}
+                                            {card.socialProof && (
+                                                <div className="mt-2 text-xs font-semibold text-rose-500">{card.socialProof}</div>
+                                            )}
                                         </div>
-                                    }
-                                    <div className="p-3 bg-white dark:bg-stone-700 rounded-b-lg">
-                                        <h4 className="font-semibold text-stone-800 dark:text-stone-100">{card.title}</h4>
-                                        <p className="text-sm text-stone-500 dark:text-stone-300 mt-1">{card.description}</p>
+                                        <div className="p-3 mt-auto border-t border-border flex items-center justify-between">
+                                            <button onClick={() => onArtifactAction(`Show me fewer recommendations like '${card.title}'`)} title="Less like this" className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-red-500 transition-colors">
+                                                <ThumbsDown size={16}/>
+                                            </button>
+                                            <button onClick={() => onArtifactAction(`Find more recommendations similar to '${card.title}'`)} className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors">
+                                                <span>More like this</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </button>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    )}
+                    ))}
+
                     {/* Chips */}
                     {message.artifacts.chips && message.artifacts.chips.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 px-2">
                             {message.artifacts.chips.map(chip => (
-                                <button key={chip.id} onClick={() => handleToggleChip(chip.id)} className={`px-4 py-2 text-sm font-semibold border rounded-full transition-colors ${selectedChipIds.has(chip.id) ? 'bg-orange-100 dark:bg-orange-900/50 border-orange-400 text-orange-700 dark:text-orange-200' : 'bg-white dark:bg-stone-700 border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-600'}`}>
+                                <button key={chip.id} onClick={() => onArtifactAction(chip.label)} className="px-4 py-2 text-sm font-semibold border rounded-full transition-colors bg-card border-border text-foreground hover:bg-muted">
                                     {chip.label}
                                 </button>
                             ))}
                         </div>
                     )}
+
                     {/* Map Link */}
                     {message.artifacts.map && (
-                         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(message.artifacts.map.query)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/50 rounded-full shadow-sm hover:bg-green-100 dark:hover:bg-green-900 transition-all duration-200 ease-out transform hover:scale-105">
+                         <a href={`httpshttps://www.google.com/maps/search/?api=1&query=${encodeURIComponent(message.artifacts.map.query)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/50 rounded-full shadow-sm hover:bg-green-100 dark:hover:bg-green-900 transition-all duration-200 ease-out transform hover:scale-105">
                             <MapPin size={16}/>
                             Show on Map: {message.artifacts.map.query}
                         </a>
                     )}
-                    {(message.artifacts.cards?.length || message.artifacts.chips?.length) ? (
-                        <div className="pt-2">
-                             <button onClick={handleContinue} className="px-5 py-2.5 text-sm font-bold text-white bg-[#E07A5F] rounded-full shadow-md hover:bg-opacity-90 transition-transform hover:scale-105 disabled:opacity-50 disabled:scale-100" disabled={selectedCardIds.size === 0 && selectedChipIds.size === 0}>
-                                Continue
-                            </button>
-                        </div>
-                    ) : null}
                 </div>
             )}
             {quickReplies.length > 0 && (
@@ -234,7 +201,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onArtifactAc
                         <button
                             key={index}
                             onClick={() => onArtifactAction(reply)}
-                            className="px-4 py-2 text-sm font-semibold text-[#E07A5F] bg-white dark:bg-stone-700 dark:text-orange-300 rounded-full shadow-sm hover:bg-orange-50 dark:hover:bg-stone-600 transition-all duration-200 ease-out transform hover:scale-105"
+                            className="px-4 py-2 text-sm font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full shadow-sm hover:bg-primary/20 transition-all"
                         >
                             {reply}
                         </button>

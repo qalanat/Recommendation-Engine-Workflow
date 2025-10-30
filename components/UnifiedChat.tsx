@@ -80,23 +80,15 @@ const UnifiedChat: React.FC<UnifiedChatProps> = ({ user, category, onUpdateCateg
                 .join('\n');
 
             if (contextString) {
-                combinedSystemInstruction += `\n\nFor your reference, here is some personal context provided by the user:\n${contextString}`;
+                combinedSystemInstruction += `\n\nFor your reference, here is the user's taste profile:\n${contextString}`;
             }
 
             if (userLocation) {
                  combinedSystemInstruction += `\n\nThe user's current location is approximately latitude ${userLocation.latitude}, longitude ${userLocation.longitude}. Use this for distance-based queries.`;
             }
 
-            if(category.interactionMode === 'card') {
-                combinedSystemInstruction += `\n\nIMPORTANT: You are in Card-based UI mode. Your response MUST be a single, valid JSON object and nothing else. Do not wrap it in markdown backticks or any other text. The JSON object must have a 'text' property with your conversational response, and can optionally have 'cards', 'chips', and 'map' properties.
-- 'text': Your textual response to the user.
-- 'cards': An array of objects, where each object has 'id' (a unique string), 'title' (string), 'description' (string), and optional 'imageUrl' (string URL).
-- 'chips': An array of objects, where each object has 'id' (a unique string) and 'label' (string).
-- 'map': An object with a 'query' property (e.g., "coffee shops near me" or a specific address).
-
-Example:
-{"text": "Great! To help me find the perfect cologne, what scent family are you drawn to?", "cards": [{"id": "c1", "title": "Woody", "description": "Earthy and masculine scents.", "imageUrl": "https://example.com/woody.jpg"}, {"id": "c2", "title": "Citrus", "description": "Fresh and zesty notes."}], "chips": []}`;
-            }
+            // This specific prompt addition is for the new card interaction mode.
+            // It has been moved to the default category prompt in App.tsx to be more robust.
 
             const chatSession = ai.chats.create({
                 model: 'gemini-2.5-pro',
@@ -113,19 +105,17 @@ Example:
                     }))
             });
             chatRef.current = chatSession;
-             if (messages.length === 0 && category.id.startsWith('rec-')) {
-              const greetings = [
-                  `Hello ${user.name}! What can I help you discover today?`,
-                  `Hi ${user.name}! Let's find something amazing for you.`,
-                  `Welcome back, ${user.name}! What adventure are we planning?`,
-                  `Hey ${user.name}! I'm here to help. What are you in the mood for?`,
-              ];
-              const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-              setMessages([{ 
-                id: 'init',
-                sender: 'ai', 
-                text: randomGreeting
-              }]);
+             if (messages.length === 0 && category.interactionMode === 'card') {
+                const greetings = [
+                    `Hello ${user.name}! What can I help you discover today? [QUICK_REPLY: "Just browsing", "I need a gift idea", "Surprise me!"]`,
+                    `Hi ${user.name}! Let's find something amazing for you. [QUICK_REPLY: "I'm looking for movies", "Show me nearby restaurants", "What's new in tech?"]`,
+                ];
+                const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+                setMessages([{ 
+                    id: 'init',
+                    sender: 'ai', 
+                    text: randomGreeting
+                }]);
             }
         } catch (e) {
             console.error(e);
@@ -188,7 +178,7 @@ Example:
                             ...aiMessage,
                             text: parsedResponse.text || '',
                             artifacts: {
-                                cards: parsedResponse.cards,
+                                recommendationGroups: parsedResponse.recommendationGroups,
                                 chips: parsedResponse.chips,
                                 map: parsedResponse.map ? {...parsedResponse.map, userLocation} : undefined
                             }
@@ -373,18 +363,18 @@ Example:
 
     return (
         <div className="flex h-full flex-col bg-transparent">
-            <header className="flex items-center justify-between border-b border-stone-200 dark:border-stone-700 p-4 shrink-0">
+            <header className="flex items-center justify-between border-b border-border p-4 shrink-0">
                  <div className="flex flex-col">
-                    <h1 className="text-lg font-bold text-stone-800 dark:text-stone-100">{category.name}</h1>
-                    <p className="text-xs text-stone-500 dark:text-stone-400 capitalize flex items-center gap-1.5">
-                        {category.interactionMode} Mode 
-                        {userLocation && <span className="flex items-center gap-1"><MapPin size={12} className="text-green-500" /> Location On</span>}
-                    </p>
+                    <h1 className="text-lg font-semibold font-display text-foreground">{category.name}</h1>
+                    <div className="text-xs text-muted-foreground capitalize flex items-center gap-2">
+                        <span>{category.interactionMode} Mode</span>
+                        {userLocation && <span className="flex items-center gap-1 text-green-600"><MapPin size={12} /> Location On</span>}
+                    </div>
                 </div>
                  {inputMode === 'audio' && (
-                    <div className="flex items-center gap-2 text-[#E07A5F] animate-pulse">
+                    <div className="flex items-center gap-2 text-primary animate-pulse">
                         <AudioWaveform size={20} />
-                        <span>Live Conversation</span>
+                        <span className="font-semibold">Live Conversation</span>
                     </div>
                 )}
             </header>
@@ -394,27 +384,27 @@ Example:
                     <ChatMessageItem key={msg.id} message={msg} onArtifactAction={handleArtifactAction} />
                 ))}
                  {inputMode === 'audio' && (
-                    <div className="p-3 space-y-2 text-sm text-stone-600 animate-fade-in-slide-up">
+                    <div className="p-3 space-y-2 text-sm text-muted-foreground animate-fade-in-slide-up">
                         {liveTranscript.user && (
                             <div className="flex justify-end">
-                                <p className="p-3 rounded-2xl max-w-lg bg-orange-100 text-orange-900 opacity-80">{liveTranscript.user}</p>
+                                <p className="p-3 rounded-2xl max-w-lg bg-primary/10 text-primary-foreground opacity-80">{liveTranscript.user}</p>
 
                             </div>
                         )}
                         {liveTranscript.model && (
                              <div className="flex justify-start items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-orange-400 ai-speaking-indicator"></div>
-                                <p className="p-3 rounded-2xl max-w-lg bg-stone-200 text-stone-800 opacity-80">{liveTranscript.model}</p>
+                                <div className="w-2 h-2 rounded-full bg-accent ai-speaking-indicator"></div>
+                                <p className="p-3 rounded-2xl max-w-lg bg-muted text-foreground opacity-80">{liveTranscript.model}</p>
                             </div>
                         )}
                     </div>
                 )}
                 {isLoading && <ChatMessageItem message={{ id: 'loading', sender: 'ai', text: '', isLoading: true }} onArtifactAction={() => {}} />}
-                {error && <div className="rounded-2xl bg-red-100 p-3 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-300">{error}</div>}
+                {error && <div className="rounded-2xl bg-red-500/10 p-3 text-sm text-red-500">{error}</div>}
                 <div ref={messagesEndRef} />
             </div>
 
-            <footer className="border-t border-stone-200 dark:border-stone-700 p-2 sm:p-4 glassmorphic">
+            <footer className="p-2 sm:p-4 bg-background/80 backdrop-blur-sm border-t border-border">
                 <ChatInput
                     onSend={handleSend}
                     onAudioToggle={handleAudioToggle}

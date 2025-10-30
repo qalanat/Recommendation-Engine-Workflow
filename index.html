@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -8,100 +8,279 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --font-sans: 'Inter', sans-serif;
+        --font-display: 'Sora', sans-serif;
+      }
+
+      /* THEME DEFINITIONS */
+      [data-theme="light"] {
+        --background: 244 244 245; /* stone-100 */
+        --foreground: 28 25 23; /* stone-900 */
+        --card: 255 255 255;
+        --card-foreground: 28 25 23;
+        --popover: 255 255 255;
+        --popover-foreground: 28 25 23;
+        --primary: 201 74 78; /* Brighter Red */
+        --primary-foreground: 255 255 255;
+        --secondary: 70 128 121; /* Deeper Teal */
+        --secondary-foreground: 255 255 255;
+        --muted: 229 231 235; /* gray-200 */
+        --muted-foreground: 100 110 128; /* gray-500 */
+        --accent: 226 168 76; /* Richer Gold */
+        --accent-foreground: 28 25 23;
+        --border: 228 228 231; /* stone-200 */
+        --input: 255 255 255;
+        --ring: 201 74 78;
+      }
+
+      [data-theme="dark"] {
+        --background: 18 18 20; /* Darker background */
+        --foreground: 235 235 235;
+        --card: 28 28 32;
+        --card-foreground: 235 235 235;
+        --popover: 35 36 40;
+        --popover-foreground: 235 235 235;
+        --primary: 217 94 98;
+        --primary-foreground: 255 255 255;
+        --secondary: 90 148 141;
+        --secondary-foreground: 255 255 255;
+        --muted: 50 51 55;
+        --muted-foreground: 156 163 175;
+        --accent: 236 188 118;
+        --accent-foreground: 28 25 23;
+        --border: 45 46 50; /* Slightly lighter border */
+        --input: 45 46 50;
+        --ring: 217 94 98;
+      }
+      
+      [data-theme="sunset"] {
+        --background: 29 24 43;
+        --foreground: 232 221 255;
+        --card: 42 35 60;
+        --card-foreground: 232 221 255;
+        --popover: 42 35 60;
+        --popover-foreground: 232 221 255;
+        --primary: 247 119 146;
+        --primary-foreground: 29 24 43;
+        --secondary: 181 120 255;
+        --secondary-foreground: 29 24 43;
+        --muted: 60 51 83;
+        --muted-foreground: 181 170 205;
+        --accent: 255 186 130;
+        --accent-foreground: 29 24 43;
+        --border: 60 51 83;
+        --input: 60 51 83;
+        --ring: 247 119 146;
+      }
+
+      [data-theme="ocean"] {
+        --background: 13 27 42;
+        --foreground: 210 228 238;
+        --card: 20 45 71;
+        --card-foreground: 210 228 238;
+        --popover: 20 45 71;
+        --popover-foreground: 210 228 238;
+        --primary: 52 152 219;
+        --primary-foreground: 255 255 255;
+        --secondary: 22 160 133;
+        --secondary-foreground: 255 255 255;
+        --muted: 27 58 92;
+        --muted-foreground: 150 170 180;
+        --accent: 243 156 18;
+        --accent-foreground: 13 27 42;
+        --border: 27 58 92;
+        --input: 27 58 92;
+        --ring: 52 152 219;
+      }
+
+      [data-theme="meadow"] {
+        --background: 240 247 239;
+        --foreground: 34 51 34;
+        --card: 255 255 255;
+        --card-foreground: 34 51 34;
+        --popover: 255 255 255;
+        --popover-foreground: 34 51 34;
+        --primary: 82 143 69;
+        --primary-foreground: 255 255 255;
+        --secondary: 147 177 121;
+        --secondary-foreground: 34 51 34;
+        --muted: 229 237 227;
+        --muted-foreground: 100 120 100;
+        --accent: 244 208 111;
+        --accent-foreground: 34 51 34;
+        --border: 220 230 218;
+        --input: 229 237 227;
+        --ring: 82 143 69;
+      }
+
       body {
-        font-family: 'Sora', sans-serif;
-        /* Theming is now handled by Tailwind's dark mode and CSS variables if needed */
+        font-family: var(--font-sans);
+        background-color: rgb(var(--background));
+        color: rgb(var(--foreground));
         min-height: 100vh;
-        overflow: hidden; /* Prevent body scroll with flex layout */
+        overflow: hidden;
       }
-      html.dark {
-        color-scheme: dark;
-      }
-      /* Custom scrollbar for a more polished look */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
+      .font-display { font-family: var(--font-display); }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: rgba(var(--foreground), 0.2);
         border-radius: 10px;
-        border: 2px solid transparent;
-        background-clip: content-box;
       }
-      html.dark ::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.2);
+      ::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(var(--foreground), 0.3);
       }
-      .mic-glow::before {
-        content: '';
-        position: absolute;
-        inset: -4px;
-        border-radius: 9999px;
-        background: radial-gradient(circle, rgba(224, 122, 95, 0.6) 0%, rgba(224, 122, 95, 0) 70%);
-        animation: pulse 1.5s infinite ease-out;
-        z-index: -1;
+      
+      /* Use a solid background for input fields for better contrast */
+      input, textarea {
+        background-color: rgb(var(--input)) !important;
       }
+
+      /* Smoother Animations */
       @keyframes pulse {
         0%, 100% { transform: scale(1); opacity: 0.8; }
         50% { transform: scale(1.6); opacity: 0.4; }
       }
-       @keyframes ai-speaking-pulse {
+      .mic-glow::before {
+        content: '';
+        position: absolute; inset: -4px; border-radius: 9999px;
+        background: radial-gradient(circle, rgba(var(--primary), 0.6) 0%, rgba(var(--primary), 0) 70%);
+        animation: pulse 1.8s infinite ease-out;
+        z-index: -1;
+      }
+      @keyframes ai-speaking-pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
       }
-      .ai-speaking-indicator {
-        animation: ai-speaking-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
+      .ai-speaking-indicator { animation: ai-speaking-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+      
+      @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+      .animate-fade-in { animation: fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) both; }
+      
       @keyframes fade-in-slide-up {
-        0% { opacity: 0; transform: translateY(16px); }
+        0% { opacity: 0; transform: translateY(15px); }
         100% { opacity: 1; transform: translateY(0); }
       }
-      .animate-fade-in-slide-up {
-        animation: fade-in-slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      .animate-fade-in-slide-up { animation: fade-in-slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1) both; }
+      
+      @keyframes fade-in-scale-up {
+        0% { opacity: 0; transform: scale(0.95); }
+        100% { opacity: 1; transform: scale(1); }
       }
-      .thinking-dot {
-        animation: thinking-bounce 1.4s infinite ease-in-out both;
-        width: 6px;
-        height: 6px;
-        background-color: #F2CC8F;
-        border-radius: 100%;
-        display: inline-block;
-      }
-      .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
-      .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+       .animate-fade-in-scale-up { animation: fade-in-scale-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
       @keyframes thinking-bounce {
         0%, 80%, 100% { transform: scale(0); }
         40% { transform: scale(1.0); }
       }
-      .icon-snap {
-        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      .thinking-dot {
+        animation: thinking-bounce 1.4s infinite ease-in-out both;
+        width: 6px; height: 6px;
+        background-color: rgb(var(--accent));
+        border-radius: 100%; display: inline-block;
       }
-      .icon-snap:hover {
-        transform: scale(1.2) rotate(-5deg);
+      .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+      .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+      
+      /* --- Mind Map Styles --- */
+      .mindmap-node {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        padding-left: 30px; /* space for connector */
+        margin: 4px 0;
       }
-      .sources-container {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      .mindmap-node-content-wrapper {
+        display: flex;
+        align-items: center;
       }
-      .sources-container.open {
-        grid-template-rows: 1fr;
+      
+      .mindmap-node-content {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background-color: rgb(var(--card));
+        border: 1px solid rgb(var(--border));
+        padding: 8px 12px;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        position: relative;
+        z-index: 1;
+        transition: all 0.2s ease-in-out;
+        min-width: 150px;
       }
-      .sources-content {
-        overflow: hidden;
+      .mindmap-node-content:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(var(--primary), 0.1);
+        border-color: rgb(var(--primary) / 0.5);
       }
-      .glassmorphic {
-        background-color: rgba(255, 255, 255, 0.6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+
+      .mindmap-node-text {
+        flex-grow: 1;
+        font-weight: 500;
+        outline: none;
+        min-width: 50px;
       }
-      html.dark .glassmorphic {
-        background-color: rgba(30, 30, 30, 0.6);
+      .mindmap-node-children {
+        padding-top: 10px;
+        position: relative;
       }
+      /* Connector Lines */
+      .mindmap-node::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 20px;
+        width: 15px;
+        height: 1px;
+        background-color: rgb(var(--border));
+        z-index: 0;
+      }
+      .mindmap-node::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1px;
+        height: 100%;
+        background-color: rgb(var(--border));
+        z-index: 0;
+      }
+      .mindmap-container > .mindmap-node::after,
+      .mindmap-container > .mindmap-node::before {
+         display: none; /* No connector for root nodes */
+      }
+      .mindmap-node:last-child::after {
+         height: 20px; /* Shorten line for the last child */
+      }
+
+      /* Custom Prose styles for Markdown */
+      .prose {
+        --tw-prose-body: rgb(var(--foreground) / 0.9);
+        --tw-prose-headings: rgb(var(--foreground));
+        --tw-prose-lead: rgb(var(--muted-foreground));
+        --tw-prose-links: rgb(var(--primary));
+        --tw-prose-bold: rgb(var(--foreground));
+        --tw-prose-counters: rgb(var(--muted-foreground));
+        --tw-prose-bullets: rgb(var(--muted-foreground));
+        --tw-prose-hr: rgb(var(--border));
+        --tw-prose-quotes: rgb(var(--foreground));
+        --tw-prose-quote-borders: rgb(var(--border));
+        --tw-prose-captions: rgb(var(--muted-foreground));
+        --tw-prose-code: rgb(var(--primary));
+        --tw-prose-pre-code: rgb(var(--card-foreground));
+        --tw-prose-pre-bg: rgb(var(--card));
+        --tw-prose-th-borders: rgb(var(--border));
+        --tw-prose-td-borders: rgb(var(--border));
+      }
+      .prose code::before, .prose code::after { content: "" !important; }
+      .prose p { margin-top: 0.5em; margin-bottom: 0.5em; }
+
     </style>
   <script type="importmap">
 {
@@ -117,7 +296,7 @@
 }
 </script>
 </head>
-  <body class="antialiased font-sans bg-stone-100 dark:bg-stone-900 text-[#3C3633] dark:text-stone-200">
+  <body class="antialiased font-sans text-base">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
